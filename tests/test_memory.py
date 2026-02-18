@@ -2,7 +2,7 @@
 import pytest
 from pathlib import Path
 
-from src.memory import load_memory_file
+from src.memory import load_memory_file, load_all_memory
 
 
 class TestLoadMemoryFile:
@@ -42,3 +42,40 @@ class TestLoadMemoryFile:
         result = load_memory_file(memory_dir, "user")
 
         assert "Louis du Plessis" in result
+
+
+class TestLoadAllMemory:
+    """Tests for load_all_memory function."""
+
+    def test_load_all_returns_dict(self, tmp_path: Path):
+        """load_all_memory returns dict with all memory files."""
+        # Arrange
+        memory_dir = tmp_path / "memory"
+        memory_dir.mkdir()
+        (memory_dir / "soul.md").write_text("# Soul")
+        (memory_dir / "user.md").write_text("# User")
+        (memory_dir / "telos.md").write_text("# Telos")
+        (memory_dir / "context.md").write_text("# Context")
+        (memory_dir / "harness.md").write_text("# Harness")
+
+        # Act
+        result = load_all_memory(memory_dir)
+
+        # Assert
+        assert isinstance(result, dict)
+        assert len(result) == 5
+        assert "soul" in result
+        assert "user" in result
+        assert "telos" in result
+        assert "context" in result
+        assert "harness" in result
+
+    def test_load_all_missing_file_raises(self, tmp_path: Path):
+        """load_all_memory raises if any required file is missing."""
+        memory_dir = tmp_path / "memory"
+        memory_dir.mkdir()
+        (memory_dir / "soul.md").write_text("# Soul")
+        # Missing other files
+
+        with pytest.raises(FileNotFoundError):
+            load_all_memory(memory_dir)
