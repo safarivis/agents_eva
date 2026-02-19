@@ -118,3 +118,12 @@ class TestRunAgent:
             # Assert
             assert "I am Eva" in result
             assert mock_client.messages.create.call_count == 2
+
+    def test_missing_memory_raises(self, tmp_path: Path):
+        """run_agent raises FileNotFoundError for missing memory."""
+        memory_dir = tmp_path / "memory"
+        memory_dir.mkdir()
+        # No memory files created
+
+        with pytest.raises(FileNotFoundError):
+            run_agent("Hello", memory_dir)
