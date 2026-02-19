@@ -1,4 +1,5 @@
 """Memory module for Eva - load and save memory files."""
+from datetime import datetime
 from pathlib import Path
 
 import tiktoken
@@ -55,3 +56,32 @@ def count_memory_tokens(text: str) -> int:
         Number of tokens
     """
     return len(_encoder.encode(text))
+
+
+def update_context(
+    memory_dir: Path,
+    category: str,
+    summary: str,
+    details: str,
+    followup: str | None = None,
+) -> None:
+    """Append a new entry to context.md.
+
+    Args:
+        memory_dir: Path to memory directory
+        category: Entry category (Decision, Learning, Commitment, etc.)
+        summary: One-line summary
+        details: Full details of the entry
+        followup: Optional follow-up action
+    """
+    context_file = memory_dir / "context.md"
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+
+    entry = f"\n### {timestamp} - [{category}]\n"
+    entry += f"**Summary:** {summary}\n"
+    entry += f"**Details:** {details}\n"
+    if followup:
+        entry += f"**Follow-up:** {followup}\n"
+
+    with context_file.open("a") as f:
+        f.write(entry)
