@@ -32,3 +32,51 @@ def build_system_prompt(memory: dict[str, str]) -> str:
 ## Your Architecture (Self-Awareness)
 {memory['harness']}
 """
+
+
+def run_agent(prompt: str, memory_dir: Path) -> str:
+    """Run one agent loop cycle.
+
+    1. Load memory into system prompt
+    2. Call Claude with tools
+    3. Execute any tool calls (loop until done)
+    4. Return final response
+
+    Args:
+        prompt: User prompt
+        memory_dir: Path to memory directory
+
+    Returns:
+        Final text response from Claude
+    """
+    client = anthropic.Anthropic()
+    memory = load_all_memory(memory_dir)
+    system = build_system_prompt(memory)
+
+    messages = [{"role": "user", "content": prompt}]
+
+    # Agentic loop - keep going until no more tool calls
+    while True:
+        response = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=4096,
+            system=system,
+            tools=TOOLS,
+            messages=messages,
+        )
+
+        # Check for tool use
+        tool_uses = [b for b in response.content if b.type == "tool_use"]
+        if not tool_uses:
+            # No tools, return text response
+            return "".join(b.text for b in response.content if hasattr(b, "text"))
+
+        # Execute tools and continue loop
+        messages.append({"role": "assistant", "content": response.content})
+        tool_results = []
+        for tool in tool_uses:
+            result = execute_tool(tool.name, tool.input, memory_dir)
+            tool_results.append(
+                {"type": "tool_result", "tool_use_id": tool.id, "content": result}
+            )
+        messages.append({"role": "user", "content": tool_results})
