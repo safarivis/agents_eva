@@ -1,0 +1,53 @@
+name: Eva Error Notify
+
+on:
+  workflow_run:
+    workflows:
+      - "Eva Heartbeat"
+      - "Eva Morning Brief"
+      - "Eva Weekly Review"
+    types:
+      - completed
+
+env:
+  COMPOSIO_API_KEY: ${{ secrets.COMPOSIO_API_KEY }}
+  LOUIS_PHONE: ${{ secrets.LOUIS_PHONE }}
+
+jobs:
+  notify-on-failure:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      - name: Send error notification
+        run: |
+          python -c "
+          import os
+          from src.composio_tools import send_whatsapp
+
+          workflow = '${{ github.event.workflow_run.name }}'
+          run_url = '${{ github.event.workflow_run.html_url }}'
+
+          message = f'''⚠️ Eva Error Alert
+
+          Workflow failed: {workflow}
+
+          Check logs: {run_url}
+
+          — Eva'''
+
+          send_whatsapp(os.environ['LOUIS_PHONE'], message)
+          "
