@@ -75,3 +75,46 @@ class TestRunAgent:
             # Assert
             assert result == "Hello, I am Eva."
             mock_client.messages.create.assert_called_once()
+
+    def test_with_tool_call(self, tmp_path: Path):
+        """run_agent executes tool and returns final response."""
+        # Arrange - create memory files
+        memory_dir = tmp_path / "memory"
+        memory_dir.mkdir()
+        (memory_dir / "soul.md").write_text("# Eva Soul\nI am Eva.")
+        (memory_dir / "user.md").write_text("# User")
+        (memory_dir / "telos.md").write_text("# Telos")
+        (memory_dir / "context.md").write_text("# Context")
+        (memory_dir / "harness.md").write_text("# Harness")
+
+        # First response: tool use
+        mock_tool_block = MagicMock()
+        mock_tool_block.type = "tool_use"
+        mock_tool_block.id = "tool_123"
+        mock_tool_block.name = "read_memory"
+        mock_tool_block.input = {"name": "soul"}
+
+        mock_response_1 = MagicMock()
+        mock_response_1.content = [mock_tool_block]
+        mock_response_1.stop_reason = "tool_use"
+
+        # Second response: text
+        mock_text_block = MagicMock()
+        mock_text_block.type = "text"
+        mock_text_block.text = "Your soul says: I am Eva."
+
+        mock_response_2 = MagicMock()
+        mock_response_2.content = [mock_text_block]
+        mock_response_2.stop_reason = "end_turn"
+
+        with patch("src.agent.anthropic.Anthropic") as mock_anthropic:
+            mock_client = MagicMock()
+            mock_anthropic.return_value = mock_client
+            mock_client.messages.create.side_effect = [mock_response_1, mock_response_2]
+
+            # Act
+            result = run_agent("What's in my soul?", memory_dir)
+
+            # Assert
+            assert "I am Eva" in result
+            assert mock_client.messages.create.call_count == 2
