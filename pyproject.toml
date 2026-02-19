@@ -5,6 +5,7 @@ description = "Eva - Private optimization engine for Louis du Plessis"
 requires-python = ">=3.11"
 dependencies = [
     "anthropic>=0.40.0",
+    "openai>=1.0.0",
     "tiktoken>=0.5.0",
     "python-frontmatter>=1.0.0",
 ]
