@@ -1,4 +1,6 @@
 """Tests for memory module."""
+import time
+
 import pytest
 from pathlib import Path
 
@@ -163,3 +165,28 @@ class TestUpdateContext:
         content = context_file.read_text()
         assert "**Follow-up:**" in content
         assert "Check back tomorrow" in content
+
+
+class TestPerformance:
+    """Performance tests for memory module."""
+
+    def test_load_all_memory_under_500ms(self, tmp_path: Path):
+        """load_all_memory completes in under 500ms."""
+        # Arrange - create memory files with realistic content
+        memory_dir = tmp_path / "memory"
+        memory_dir.mkdir()
+        # Each file ~2KB to simulate real memory files
+        content = "# Title\n\n" + "Lorem ipsum dolor sit amet. " * 100
+        (memory_dir / "soul.md").write_text(content)
+        (memory_dir / "user.md").write_text(content)
+        (memory_dir / "telos.md").write_text(content)
+        (memory_dir / "context.md").write_text(content)
+        (memory_dir / "harness.md").write_text(content)
+
+        # Act
+        start = time.perf_counter()
+        load_all_memory(memory_dir)
+        elapsed = time.perf_counter() - start
+
+        # Assert
+        assert elapsed < 0.5, f"load_all_memory took {elapsed:.3f}s, expected < 0.5s"
