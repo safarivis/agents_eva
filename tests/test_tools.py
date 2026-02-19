@@ -1,7 +1,8 @@
 """Tests for tools module."""
 import pytest
+from pathlib import Path
 
-from src.tools import TOOLS
+from src.tools import TOOLS, execute_tool, ToolExecutionError
 
 
 class TestToolsSchema:
@@ -33,3 +34,48 @@ class TestToolsSchema:
         assert "category" in tool["input_schema"]["properties"]
         assert "summary" in tool["input_schema"]["properties"]
         assert "details" in tool["input_schema"]["properties"]
+
+
+class TestExecuteTool:
+    """Tests for execute_tool function."""
+
+    def test_execute_read_memory(self, tmp_path: Path):
+        """execute_tool reads memory file content."""
+        memory_dir = tmp_path / "memory"
+        memory_dir.mkdir()
+        (memory_dir / "soul.md").write_text("# Eva Soul\n\nTest content.")
+
+        result = execute_tool("read_memory", {"name": "soul"}, memory_dir)
+
+        assert "Eva Soul" in result
+        assert "Test content" in result
+
+    def test_execute_update_context(self, tmp_path: Path):
+        """execute_tool updates context.md."""
+        memory_dir = tmp_path / "memory"
+        memory_dir.mkdir()
+        (memory_dir / "context.md").write_text("# Context\n\n")
+
+        result = execute_tool(
+            "update_context",
+            {"category": "Test", "summary": "Test summary", "details": "Test details"},
+            memory_dir,
+        )
+
+        assert "success" in result.lower()
+        content = (memory_dir / "context.md").read_text()
+        assert "Test summary" in content
+
+    def test_execute_unknown_tool_raises(self, tmp_path: Path):
+        """execute_tool raises ToolExecutionError for unknown tool."""
+        with pytest.raises(ToolExecutionError):
+            execute_tool("unknown_tool", {}, tmp_path)
+
+    def test_execute_read_memory_missing_file(self, tmp_path: Path):
+        """execute_tool returns error message for missing file."""
+        memory_dir = tmp_path / "memory"
+        memory_dir.mkdir()
+
+        result = execute_tool("read_memory", {"name": "soul"}, memory_dir)
+
+        assert "error" in result.lower()
