@@ -2,7 +2,7 @@
 import pytest
 from pathlib import Path
 
-from src.memory import load_memory_file, load_all_memory
+from src.memory import load_memory_file, load_all_memory, count_memory_tokens
 
 
 class TestLoadMemoryFile:
@@ -79,3 +79,26 @@ class TestLoadAllMemory:
 
         with pytest.raises(FileNotFoundError):
             load_all_memory(memory_dir)
+
+
+class TestCountMemoryTokens:
+    """Tests for count_memory_tokens function."""
+
+    def test_count_returns_positive_int(self):
+        """count_memory_tokens returns positive integer for non-empty text."""
+        text = "Hello, this is a test."
+        result = count_memory_tokens(text)
+        assert isinstance(result, int)
+        assert result > 0
+
+    def test_count_empty_string_returns_zero(self):
+        """count_memory_tokens returns 0 for empty string."""
+        result = count_memory_tokens("")
+        assert result == 0
+
+    def test_count_known_text(self):
+        """count_memory_tokens returns expected count for known text."""
+        # "Hello world" is typically 2 tokens in cl100k_base
+        text = "Hello world"
+        result = count_memory_tokens(text)
+        assert result == 2
