@@ -2,7 +2,7 @@
 import pytest
 from pathlib import Path
 
-from src.memory import load_memory_file, load_all_memory, count_memory_tokens
+from src.memory import load_memory_file, load_all_memory, count_memory_tokens, update_context
 
 
 class TestLoadMemoryFile:
@@ -102,3 +102,64 @@ class TestCountMemoryTokens:
         text = "Hello world"
         result = count_memory_tokens(text)
         assert result == 2
+
+
+class TestUpdateContext:
+    """Tests for update_context function."""
+
+    def test_update_appends_entry(self, tmp_path: Path):
+        """update_context appends new entry to context.md."""
+        memory_dir = tmp_path / "memory"
+        memory_dir.mkdir()
+        context_file = memory_dir / "context.md"
+        context_file.write_text("# Context\n\n<!-- Eva appends entries below this line -->\n")
+
+        update_context(
+            memory_dir,
+            category="Decision",
+            summary="Test decision",
+            details="This is a test decision.",
+        )
+
+        content = context_file.read_text()
+        assert "[Decision]" in content
+        assert "Test decision" in content
+        assert "This is a test decision." in content
+
+    def test_update_includes_timestamp(self, tmp_path: Path):
+        """update_context includes formatted timestamp."""
+        memory_dir = tmp_path / "memory"
+        memory_dir.mkdir()
+        context_file = memory_dir / "context.md"
+        context_file.write_text("# Context\n\n<!-- Eva appends entries below this line -->\n")
+
+        update_context(
+            memory_dir,
+            category="Learning",
+            summary="Test learning",
+            details="Learned something new.",
+        )
+
+        content = context_file.read_text()
+        # Should have date format YYYY-MM-DD HH:MM
+        assert "2026-" in content  # Current year
+        assert "### " in content  # Heading format
+
+    def test_update_with_followup(self, tmp_path: Path):
+        """update_context includes follow-up when provided."""
+        memory_dir = tmp_path / "memory"
+        memory_dir.mkdir()
+        context_file = memory_dir / "context.md"
+        context_file.write_text("# Context\n\n<!-- Eva appends entries below this line -->\n")
+
+        update_context(
+            memory_dir,
+            category="Commitment",
+            summary="Made a commitment",
+            details="Committed to something.",
+            followup="Check back tomorrow",
+        )
+
+        content = context_file.read_text()
+        assert "**Follow-up:**" in content
+        assert "Check back tomorrow" in content
