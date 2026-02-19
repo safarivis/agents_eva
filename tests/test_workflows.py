@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 
 from src.workflows.heartbeat import run_heartbeat, check_urgent_emails, check_upcoming_meetings
 from src.workflows.morning_brief import run_morning_brief, generate_brief
+from src.workflows.weekly_review import run_weekly_review
 
 
 class TestCheckUrgentEmails:
@@ -109,3 +110,28 @@ class TestRunMorningBrief:
             mock_wa.assert_called_once()
             message = mock_wa.call_args[0][1]
             assert "Good morning" in message
+
+
+class TestRunWeeklyReview:
+    """Tests for run_weekly_review function."""
+
+    def test_sends_weekly_summary(self, tmp_path: Path):
+        """run_weekly_review sends weekly digest."""
+        memory_dir = tmp_path / "memory"
+        memory_dir.mkdir()
+        (memory_dir / "context.md").write_text("# Context\n## 2026-02-15\nEntry 1\n## 2026-02-16\nEntry 2")
+
+        with patch("src.workflows.weekly_review.fetch_calendar_events") as mock_events, \
+             patch("src.workflows.weekly_review.send_whatsapp") as mock_wa, \
+             patch("src.workflows.weekly_review.sync_memory"), \
+             patch("src.workflows.weekly_review.push_memory"), \
+             patch("src.workflows.weekly_review.load_memory_file") as mock_load:
+
+            mock_events.return_value = []
+            mock_load.return_value = "# Context\nEntry from this week"
+
+            run_weekly_review(tmp_path, "+27123456789")
+
+            mock_wa.assert_called_once()
+            message = mock_wa.call_args[0][1]
+            assert "Week" in message
