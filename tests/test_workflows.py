@@ -4,6 +4,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from src.workflows.heartbeat import run_heartbeat, check_urgent_emails, check_upcoming_meetings
+from src.workflows.morning_brief import run_morning_brief, generate_brief
 
 
 class TestCheckUrgentEmails:
@@ -65,3 +66,46 @@ class TestRunHeartbeat:
 
             mock_wa.assert_called_once()
             assert "URGENT" in mock_wa.call_args[0][1]
+
+
+class TestGenerateBrief:
+    """Tests for generate_brief function."""
+
+    def test_generates_formatted_brief(self):
+        """generate_brief returns formatted markdown."""
+        emails = [{"subject": "Test email", "from": "test@example.com"}]
+        events = [{"summary": "Meeting", "start": {"dateTime": "2026-02-19T10:00:00Z"}}]
+        context = "Previous context entries"
+
+        result = generate_brief(emails, events, context)
+
+        assert "Good morning" in result
+        assert "Test email" in result
+        assert "Meeting" in result
+
+
+class TestRunMorningBrief:
+    """Tests for run_morning_brief function."""
+
+    def test_sends_brief_via_whatsapp(self, tmp_path: Path):
+        """run_morning_brief sends formatted brief."""
+        memory_dir = tmp_path / "memory"
+        memory_dir.mkdir()
+        (memory_dir / "context.md").write_text("# Context\n")
+
+        with patch("src.workflows.morning_brief.fetch_emails") as mock_emails, \
+             patch("src.workflows.morning_brief.fetch_calendar_events") as mock_events, \
+             patch("src.workflows.morning_brief.send_whatsapp") as mock_wa, \
+             patch("src.workflows.morning_brief.sync_memory"), \
+             patch("src.workflows.morning_brief.push_memory"), \
+             patch("src.workflows.morning_brief.load_memory_file") as mock_load:
+
+            mock_emails.return_value = [{"subject": "Test", "from": "test@example.com"}]
+            mock_events.return_value = [{"summary": "Standup", "start": {"dateTime": "2026-02-19T09:00:00Z"}}]
+            mock_load.return_value = "# Context\nPrevious entries"
+
+            run_morning_brief(tmp_path, "+27123456789")
+
+            mock_wa.assert_called_once()
+            message = mock_wa.call_args[0][1]
+            assert "Good morning" in message
