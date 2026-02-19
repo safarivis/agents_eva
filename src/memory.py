@@ -1,6 +1,8 @@
 """Memory module for Eva - load and save memory files."""
 from pathlib import Path
 
+import tiktoken
+
 # Required memory files for Eva's identity and context
 MEMORY_FILES = ["soul", "user", "telos", "context", "harness"]
 
@@ -37,3 +39,19 @@ def load_all_memory(memory_dir: Path) -> dict[str, str]:
         FileNotFoundError: If any required memory file is missing
     """
     return {name: load_memory_file(memory_dir, name) for name in MEMORY_FILES}
+
+
+# Initialize encoder once for efficiency
+_encoder = tiktoken.get_encoding("cl100k_base")
+
+
+def count_memory_tokens(text: str) -> int:
+    """Count tokens in text using cl100k_base encoding.
+
+    Args:
+        text: Text to count tokens in
+
+    Returns:
+        Number of tokens
+    """
+    return len(_encoder.encode(text))
