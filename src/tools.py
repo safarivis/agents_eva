@@ -47,3 +47,43 @@ TOOLS = [
         },
     },
 ]
+
+
+class ToolExecutionError(Exception):
+    """Raised when tool execution fails."""
+
+    pass
+
+
+def execute_tool(name: str, args: dict, memory_dir: Path) -> str:
+    """Execute a tool and return result as string.
+
+    Args:
+        name: Tool name
+        args: Tool arguments
+        memory_dir: Path to memory directory
+
+    Returns:
+        Tool execution result as string
+
+    Raises:
+        ToolExecutionError: If tool is unknown
+    """
+    if name == "read_memory":
+        try:
+            return load_memory_file(memory_dir, args["name"])
+        except FileNotFoundError as e:
+            return f"Error: {e}"
+
+    elif name == "update_context":
+        update_context(
+            memory_dir,
+            category=args["category"],
+            summary=args["summary"],
+            details=args["details"],
+            followup=args.get("followup"),
+        )
+        return "Context updated successfully."
+
+    else:
+        raise ToolExecutionError(f"Unknown tool: {name}")
