@@ -54,46 +54,54 @@ class TestWebhookEndpoint:
         assert response.status_code == 200
         assert response.data == b"abc123"
 
-    def test_post_processes_message(self, client):
-        """POST /webhook processes incoming message."""
-        payload = {
-            "entry": [{
-                "changes": [{
-                    "value": {
-                        "messages": [{
-                            "from": "27123456789",
-                            "text": {"body": "Hello Eva"}
-                        }]
-                    }
-                }]
-            }]
-        }
+    def test_post_returns_received(self, client):
+        """POST /webhook acknowledges receipt."""
+        payload = {"test": "data"}
 
-        with patch.dict("os.environ", {
-            "META_APP_SECRET": "secret",
-            "ALLOWED_PHONE": "27123456789",
-        }), patch("src.gateway.run_agent") as mock_agent, \
-           patch("src.gateway.send_whatsapp") as mock_wa, \
-           patch("src.gateway.sync_memory"), \
-           patch("src.gateway.push_memory"), \
-           patch("src.gateway.update_context"):
-
-            mock_agent.return_value = "Hello!"
-
-            # Generate valid signature
-            body = json.dumps(payload).encode()
-            sig = "sha256=" + hmac.new(b"secret", body, hashlib.sha256).hexdigest()
-
+        with patch.dict("os.environ", {"META_APP_SECRET": ""}):
             response = client.post(
                 "/webhook",
-                data=body,
+                json=payload,
                 content_type="application/json",
-                headers={"X-Hub-Signature-256": sig}
             )
 
         assert response.status_code == 200
-        mock_agent.assert_called_once()
-        mock_wa.assert_called_once()
+        assert b"received" in response.data
+
+
+class TestTriggerEndpoint:
+    """Tests for /trigger endpoint."""
+
+    @pytest.fixture
+    def client(self):
+        app.config["TESTING"] = True
+        with app.test_client() as client:
+            yield client
+
+    def test_trigger_heartbeat(self, client, tmp_path):
+        """POST /trigger with heartbeat workflow."""
+        # Create memory directory for heartbeat
+        memory_dir = tmp_path / "memory"
+        memory_dir.mkdir()
+        (memory_dir / "context.md").write_text("# Context\n")
+
+        with patch("src.gateway.sync_memory"), \
+             patch("src.gateway.REPO_DIR", tmp_path), \
+             patch("src.gateway.MEMORY_DIR", memory_dir), \
+             patch("src.workflows.heartbeat.fetch_emails") as mock_emails, \
+             patch("src.workflows.heartbeat.fetch_calendar_events") as mock_events, \
+             patch("src.workflows.heartbeat.send_email") as mock_email, \
+             patch("src.workflows.heartbeat.sync_memory"), \
+             patch("src.workflows.heartbeat.push_memory"), \
+             patch.dict("os.environ", {"USER_EMAIL": "test@example.com"}):
+
+            mock_emails.return_value = [{"subject": "URGENT: Test", "from": "test@example.com"}]
+            mock_events.return_value = []
+
+            response = client.post("/trigger", json={"workflow": "heartbeat"})
+
+        assert response.status_code == 200
+        assert b"heartbeat" in response.data
 
 
 class TestHealthEndpoint:

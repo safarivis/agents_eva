@@ -64,25 +64,29 @@ def fetch_calendar_events(
     return events
 
 
-def send_whatsapp(
-    phone_number: str,
-    message: str,
+def send_email(
+    to_email: str,
+    subject: str,
+    body: str,
 ) -> bool:
-    """Send WhatsApp message via Composio.
+    """Send email via Gmail/Composio.
 
     Args:
-        phone_number: Recipient phone number (with country code)
-        message: Message text to send
+        to_email: Recipient email address
+        subject: Email subject line
+        body: Email body text
 
     Returns:
         True if sent successfully
     """
     toolset = _get_toolset()
     result = toolset.execute_action(
-        action=Action.WHATSAPP_SEND_MESSAGE,
+        action=Action.GMAIL_SEND_EMAIL,
         params={
-            "to": phone_number,
-            "body": message,
+            "recipient_email": to_email,
+            "subject": subject,
+            "body": body,
+            "user_id": "me",
         },
     )
-    return result.get("data", {}).get("success", False)
+    return bool(result.get("data", {}).get("id"))

@@ -1,4 +1,4 @@
-"""Flask gateway for WhatsApp webhooks."""
+"""Flask gateway for Eva webhooks and health checks."""
 import hashlib
 import hmac
 import os
@@ -7,7 +7,7 @@ from pathlib import Path
 from flask import Flask, request, jsonify
 
 from .agent import run_agent
-from .composio_tools import send_whatsapp
+from .composio_tools import send_email
 from .workflows.base import sync_memory, push_memory
 from .memory import update_context
 
@@ -56,60 +56,54 @@ def webhook_verify():
 
 @app.route("/webhook", methods=["POST"])
 def webhook_receive():
-    """Handle incoming WhatsApp messages."""
-    # Verify signature
+    """Handle incoming webhook requests (reserved for future use)."""
+    # Verify signature if secret is configured
     signature = request.headers.get("X-Hub-Signature-256", "")
     secret = os.environ.get("META_APP_SECRET", "")
 
-    if not verify_signature(request.data, signature, secret):
+    if secret and signature and not verify_signature(request.data, signature, secret):
         return "Invalid signature", 403
 
-    # Parse message
+    # Parse generic webhook payload
     data = request.json
-    try:
-        entry = data["entry"][0]
-        changes = entry["changes"][0]
-        value = changes["value"]
-        message = value["messages"][0]
-        sender = message["from"]
-        text = message["text"]["body"]
-    except (KeyError, IndexError):
-        return jsonify({"status": "no message"}), 200
+    if not data:
+        return jsonify({"status": "no data"}), 200
 
-    # Check if sender is allowed
-    allowed_phone = os.environ.get("ALLOWED_PHONE", "")
-    if sender != allowed_phone:
-        return jsonify({"status": "unauthorized"}), 200
+    # Future: handle different webhook types here
+    # For now, just acknowledge receipt
+    return jsonify({"status": "received"}), 200
 
-    # Sync memory from git
+
+@app.route("/trigger", methods=["POST"])
+def trigger_workflow():
+    """Manually trigger Eva workflows via HTTP.
+
+    POST /trigger with JSON body: {"workflow": "heartbeat|morning_brief|weekly_review"}
+    """
+    data = request.json or {}
+    workflow = data.get("workflow", "")
+    user_email = os.environ.get("USER_EMAIL", "louisrdup@gmail.com")
+
+    # Sync memory
     try:
         sync_memory(REPO_DIR)
     except Exception as e:
         app.logger.error(f"Failed to sync memory: {e}")
 
-    # Run Eva agent
-    try:
-        response = run_agent(text, MEMORY_DIR)
-    except Exception as e:
-        app.logger.error(f"Agent error: {e}")
-        response = f"Sorry, I encountered an error: {str(e)[:100]}"
-
-    # Send response via WhatsApp
-    send_whatsapp(sender, response)
-
-    # Log to context and push
-    try:
-        update_context(
-            MEMORY_DIR,
-            category="WhatsApp",
-            summary=f"Replied to: {text[:50]}",
-            details=f"Response: {response[:200]}",
-        )
-        push_memory(REPO_DIR, "eva: whatsapp reply")
-    except Exception as e:
-        app.logger.error(f"Failed to push memory: {e}")
-
-    return jsonify({"status": "ok"}), 200
+    if workflow == "heartbeat":
+        from .workflows.heartbeat import run_heartbeat
+        run_heartbeat(REPO_DIR, user_email)
+        return jsonify({"status": "ok", "workflow": "heartbeat"}), 200
+    elif workflow == "morning_brief":
+        from .workflows.morning_brief import run_morning_brief
+        run_morning_brief(REPO_DIR, user_email)
+        return jsonify({"status": "ok", "workflow": "morning_brief"}), 200
+    elif workflow == "weekly_review":
+        from .workflows.weekly_review import run_weekly_review
+        run_weekly_review(REPO_DIR, user_email)
+        return jsonify({"status": "ok", "workflow": "weekly_review"}), 200
+    else:
+        return jsonify({"error": "Unknown workflow", "valid": ["heartbeat", "morning_brief", "weekly_review"]}), 400
 
 
 @app.route("/health", methods=["GET"])

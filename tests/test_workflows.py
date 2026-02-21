@@ -48,7 +48,7 @@ class TestRunHeartbeat:
     """Tests for run_heartbeat function."""
 
     def test_sends_alert_when_urgent_items(self, tmp_path: Path):
-        """run_heartbeat sends WhatsApp when urgent items found."""
+        """run_heartbeat sends email when urgent items found."""
         # Setup memory
         memory_dir = tmp_path / "memory"
         memory_dir.mkdir()
@@ -56,17 +56,19 @@ class TestRunHeartbeat:
 
         with patch("src.workflows.heartbeat.fetch_emails") as mock_emails, \
              patch("src.workflows.heartbeat.fetch_calendar_events") as mock_events, \
-             patch("src.workflows.heartbeat.send_whatsapp") as mock_wa, \
+             patch("src.workflows.heartbeat.send_email") as mock_email, \
              patch("src.workflows.heartbeat.sync_memory"), \
              patch("src.workflows.heartbeat.push_memory"):
 
             mock_emails.return_value = [{"subject": "URGENT: Check this", "from": "boss@company.com"}]
             mock_events.return_value = []
 
-            run_heartbeat(tmp_path, "+27123456789")
+            run_heartbeat(tmp_path, "test@example.com")
 
-            mock_wa.assert_called_once()
-            assert "URGENT" in mock_wa.call_args[0][1]
+            mock_email.assert_called_once()
+            # Check subject and body
+            assert "Alert" in mock_email.call_args[0][1]  # subject
+            assert "URGENT" in mock_email.call_args[0][2]  # body
 
 
 class TestGenerateBrief:
@@ -88,15 +90,15 @@ class TestGenerateBrief:
 class TestRunMorningBrief:
     """Tests for run_morning_brief function."""
 
-    def test_sends_brief_via_whatsapp(self, tmp_path: Path):
-        """run_morning_brief sends formatted brief."""
+    def test_sends_brief_via_email(self, tmp_path: Path):
+        """run_morning_brief sends formatted brief via email."""
         memory_dir = tmp_path / "memory"
         memory_dir.mkdir()
         (memory_dir / "context.md").write_text("# Context\n")
 
         with patch("src.workflows.morning_brief.fetch_emails") as mock_emails, \
              patch("src.workflows.morning_brief.fetch_calendar_events") as mock_events, \
-             patch("src.workflows.morning_brief.send_whatsapp") as mock_wa, \
+             patch("src.workflows.morning_brief.send_email") as mock_email, \
              patch("src.workflows.morning_brief.sync_memory"), \
              patch("src.workflows.morning_brief.push_memory"), \
              patch("src.workflows.morning_brief.load_memory_file") as mock_load:
@@ -105,24 +107,24 @@ class TestRunMorningBrief:
             mock_events.return_value = [{"summary": "Standup", "start": {"dateTime": "2026-02-19T09:00:00Z"}}]
             mock_load.return_value = "# Context\nPrevious entries"
 
-            run_morning_brief(tmp_path, "+27123456789")
+            run_morning_brief(tmp_path, "test@example.com")
 
-            mock_wa.assert_called_once()
-            message = mock_wa.call_args[0][1]
-            assert "Good morning" in message
+            mock_email.assert_called_once()
+            body = mock_email.call_args[0][2]  # third arg is body
+            assert "Good morning" in body
 
 
 class TestRunWeeklyReview:
     """Tests for run_weekly_review function."""
 
     def test_sends_weekly_summary(self, tmp_path: Path):
-        """run_weekly_review sends weekly digest."""
+        """run_weekly_review sends weekly digest via email."""
         memory_dir = tmp_path / "memory"
         memory_dir.mkdir()
         (memory_dir / "context.md").write_text("# Context\n## 2026-02-15\nEntry 1\n## 2026-02-16\nEntry 2")
 
         with patch("src.workflows.weekly_review.fetch_calendar_events") as mock_events, \
-             patch("src.workflows.weekly_review.send_whatsapp") as mock_wa, \
+             patch("src.workflows.weekly_review.send_email") as mock_email, \
              patch("src.workflows.weekly_review.sync_memory"), \
              patch("src.workflows.weekly_review.push_memory"), \
              patch("src.workflows.weekly_review.load_memory_file") as mock_load:
@@ -130,8 +132,8 @@ class TestRunWeeklyReview:
             mock_events.return_value = []
             mock_load.return_value = "# Context\nEntry from this week"
 
-            run_weekly_review(tmp_path, "+27123456789")
+            run_weekly_review(tmp_path, "test@example.com")
 
-            mock_wa.assert_called_once()
-            message = mock_wa.call_args[0][1]
-            assert "Week" in message
+            mock_email.assert_called_once()
+            subject = mock_email.call_args[0][1]  # second arg is subject
+            assert "Week" in subject

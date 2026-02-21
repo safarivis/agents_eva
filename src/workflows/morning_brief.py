@@ -2,7 +2,7 @@
 from datetime import datetime
 from pathlib import Path
 
-from ..composio_tools import fetch_emails, fetch_calendar_events, send_whatsapp
+from ..composio_tools import fetch_emails, fetch_calendar_events, send_email
 from ..memory import load_memory_file, update_context
 from .base import sync_memory, push_memory
 
@@ -70,12 +70,12 @@ def generate_brief(
     return "\n".join(lines)
 
 
-def run_morning_brief(repo_dir: Path, phone_number: str) -> None:
+def run_morning_brief(repo_dir: Path, user_email: str) -> None:
     """Run morning brief workflow.
 
     Args:
         repo_dir: Path to Eva repository
-        phone_number: WhatsApp number to send brief to
+        user_email: Email address to send brief to
     """
     memory_dir = repo_dir / "memory"
 
@@ -89,7 +89,8 @@ def run_morning_brief(repo_dir: Path, phone_number: str) -> None:
 
     # Generate and send brief
     brief = generate_brief(emails, events, context)
-    send_whatsapp(phone_number, brief)
+    today = datetime.now().strftime("%A, %B %d")
+    send_email(user_email, f"☀️ Eva Morning Brief - {today}", brief)
 
     # Log to context
     update_context(

@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 from src.composio_tools import (
     fetch_emails,
     fetch_calendar_events,
-    send_whatsapp,
+    send_email,
 )
 
 
@@ -55,17 +55,17 @@ class TestFetchCalendarEvents:
             assert result[0]["summary"] == "Meeting"
 
 
-class TestSendWhatsapp:
-    """Tests for send_whatsapp function."""
+class TestSendEmail:
+    """Tests for send_email function."""
 
-    def test_sends_message_successfully(self):
-        """send_whatsapp returns success status."""
+    def test_sends_email_successfully(self):
+        """send_email returns success status."""
         with patch("src.composio_tools.ComposioToolSet") as mock_toolset:
             mock_instance = MagicMock()
             mock_toolset.return_value = mock_instance
-            mock_instance.execute_action.return_value = {"data": {"success": True}}
+            mock_instance.execute_action.return_value = {"data": {"id": "msg123"}}
 
-            result = send_whatsapp("+27123456789", "Hello!")
+            result = send_email("test@example.com", "Test Subject", "Hello!")
 
             assert result is True
             mock_instance.execute_action.assert_called_once()

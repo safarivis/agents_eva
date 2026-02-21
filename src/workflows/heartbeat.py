@@ -2,7 +2,7 @@
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from ..composio_tools import fetch_emails, fetch_calendar_events, send_whatsapp
+from ..composio_tools import fetch_emails, fetch_calendar_events, send_email
 from ..memory import update_context
 from .base import sync_memory, push_memory
 
@@ -69,12 +69,12 @@ def check_upcoming_meetings(events: list[dict], hours: int = 2) -> list[dict]:
     return upcoming
 
 
-def run_heartbeat(repo_dir: Path, phone_number: str) -> None:
+def run_heartbeat(repo_dir: Path, user_email: str) -> None:
     """Run heartbeat check.
 
     Args:
         repo_dir: Path to Eva repository
-        phone_number: WhatsApp number to alert
+        user_email: Email address to send alerts to
     """
     memory_dir = repo_dir / "memory"
 
@@ -103,14 +103,14 @@ def run_heartbeat(repo_dir: Path, phone_number: str) -> None:
 
     # Send alert if anything urgent
     if alerts:
-        message = "⚡ Eva Heartbeat Alert\n\n" + "\n".join(alerts)
-        send_whatsapp(phone_number, message)
+        body = "\n".join(alerts)
+        send_email(user_email, "⚡ Eva Heartbeat Alert", body)
 
         # Log to context
         update_context(
             memory_dir,
             category="Heartbeat",
             summary=f"Sent alert: {len(urgent_emails)} emails, {len(upcoming_meetings)} meetings",
-            details=message,
+            details=body,
         )
         push_memory(repo_dir, "eva: heartbeat alert sent")

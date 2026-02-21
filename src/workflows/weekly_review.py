@@ -2,17 +2,17 @@
 from datetime import datetime
 from pathlib import Path
 
-from ..composio_tools import fetch_calendar_events, send_whatsapp
+from ..composio_tools import fetch_calendar_events, send_email
 from ..memory import load_memory_file, update_context
 from .base import sync_memory, push_memory
 
 
-def run_weekly_review(repo_dir: Path, phone_number: str) -> None:
+def run_weekly_review(repo_dir: Path, user_email: str) -> None:
     """Run weekly review workflow.
 
     Args:
         repo_dir: Path to Eva repository
-        phone_number: WhatsApp number to send review to
+        user_email: Email address to send review to
     """
     memory_dir = repo_dir / "memory"
 
@@ -58,8 +58,9 @@ def run_weekly_review(repo_dir: Path, phone_number: str) -> None:
     lines.append("")
     lines.append("— Eva")
 
-    message = "\n".join(lines)
-    send_whatsapp(phone_number, message)
+    body = "\n".join(lines)
+    week_ending = datetime.now().strftime("%B %d, %Y")
+    send_email(user_email, f"📊 Eva Weekly Review - {week_ending}", body)
 
     # Log to context
     update_context(
