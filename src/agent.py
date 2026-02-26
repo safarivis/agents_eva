@@ -9,10 +9,12 @@ from .memory import load_all_memory
 from .tools import TOOLS, execute_tool
 
 # Provider configuration
-PROVIDER = os.environ.get("EVA_PROVIDER", "anthropic")  # "anthropic" or "nvidia"
+PROVIDER = os.environ.get("EVA_PROVIDER", "anthropic")  # "anthropic", "nvidia", or "grok"
 NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1"
 NVIDIA_MODEL = "moonshotai/kimi-k2.5"
 ANTHROPIC_MODEL = "claude-sonnet-4-20250514"
+GROK_BASE_URL = "https://api.x.ai/v1"
+GROK_MODEL = "grok-3-fast"
 
 
 def _convert_tools_to_openai_format(tools: list) -> list:
@@ -78,6 +80,8 @@ def run_agent(prompt: str, memory_dir: Path) -> str:
 
     if PROVIDER == "nvidia":
         return _run_agent_nvidia(prompt, system, memory_dir)
+    elif PROVIDER == "grok":
+        return _run_agent_grok(prompt, system, memory_dir)
     else:
         return _run_agent_anthropic(prompt, system, memory_dir)
 
@@ -126,6 +130,50 @@ def _run_agent_nvidia(prompt: str, system: str, memory_dir: Path) -> str:
     while True:
         response = client.chat.completions.create(
             model=NVIDIA_MODEL,
+            max_tokens=8192,  # Kimi is a reasoning model, needs more tokens
+            messages=messages,
+            tools=tools,
+            tool_choice="auto",
+        )
+
+        message = response.choices[0].message
+
+        # Check for tool calls
+        if not message.tool_calls:
+            # Kimi K2.5 is a reasoning model - content may be in reasoning_content
+            content = message.content
+            if not content and hasattr(message, "reasoning_content"):
+                content = message.reasoning_content
+            return content or ""
+
+        # Execute tools and continue loop
+        messages.append(message)
+        for tool_call in message.tool_calls:
+            args = json.loads(tool_call.function.arguments)
+            result = execute_tool(tool_call.function.name, args, memory_dir)
+            messages.append({
+                "role": "tool",
+                "tool_call_id": tool_call.id,
+                "content": result,
+            })
+
+
+def _run_agent_grok(prompt: str, system: str, memory_dir: Path) -> str:
+    """Run agent using xAI Grok API."""
+    client = OpenAI(
+        base_url=GROK_BASE_URL,
+        api_key=os.environ.get("GROK_API_KEY"),
+    )
+
+    messages = [
+        {"role": "system", "content": system},
+        {"role": "user", "content": prompt},
+    ]
+    tools = _convert_tools_to_openai_format(TOOLS)
+
+    while True:
+        response = client.chat.completions.create(
+            model=GROK_MODEL,
             max_tokens=4096,
             messages=messages,
             tools=tools,
