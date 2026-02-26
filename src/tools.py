@@ -166,52 +166,67 @@ def execute_tool(name: str, args: dict, memory_dir: Path) -> str:
 
     # GitHub Tools
     elif name == "github_get_repo":
-        result = github_get_repo(args["owner"], args["repo"])
-        return f"📁 {result['full_name']}\n⭐ {result['stars']} | 🍴 {result['forks']} | 🐛 {result['open_issues']} open issues\n📝 {result['description'] or 'No description'}\n🔗 {result['html_url']}"
+        try:
+            result = github_get_repo(args["owner"], args["repo"])
+            return f"📁 {result['full_name']}\n⭐ {result['stars']} | 🍴 {result['forks']} | 🐛 {result['open_issues']} open issues\n📝 {result['description'] or 'No description'}\n🔗 {result['html_url']}"
+        except RuntimeError as e:
+            return f"⚠️ {e}\nSet GITHUB_TOKEN env var: export GITHUB_TOKEN='ghp_xxx'"
 
     elif name == "github_list_issues":
-        issues = github_list_issues(
-            args["owner"],
-            args["repo"],
-            state=args.get("state", "open"),
-            limit=args.get("limit", 10),
-        )
-        if not issues:
-            return "No issues found."
-        lines = [f"🐛 Issues in {args['owner']}/{args['repo']}:", ""]
-        for i in issues:
-            lines.append(f"#{i['number']}: {i['title']} ({i['state']}) - {i['author']}")
-        return "\n".join(lines)
+        try:
+            issues = github_list_issues(
+                args["owner"],
+                args["repo"],
+                state=args.get("state", "open"),
+                limit=args.get("limit", 10),
+            )
+            if not issues:
+                return "No issues found."
+            lines = [f"🐛 Issues in {args['owner']}/{args['repo']}:", ""]
+            for i in issues:
+                lines.append(f"#{i['number']}: {i['title']} ({i['state']}) - {i['author']}")
+            return "\n".join(lines)
+        except RuntimeError as e:
+            return f"⚠️ {e}\nSet GITHUB_TOKEN env var: export GITHUB_TOKEN='ghp_xxx'"
 
     elif name == "github_create_issue":
-        result = github_create_issue(
-            args["owner"],
-            args["repo"],
-            args["title"],
-            body=args.get("body", ""),
-            labels=args.get("labels"),
-        )
-        return f"✅ Issue created: #{result['number']}\n🔗 {result['url']}"
+        try:
+            result = github_create_issue(
+                args["owner"],
+                args["repo"],
+                args["title"],
+                body=args.get("body", ""),
+                labels=args.get("labels"),
+            )
+            return f"✅ Issue created: #{result['number']}\n🔗 {result['url']}"
+        except RuntimeError as e:
+            return f"⚠️ {e}\nSet GITHUB_TOKEN env var: export GITHUB_TOKEN='ghp_xxx'"
 
     elif name == "github_create_pull_request":
-        result = github_create_pull_request(
-            args["owner"],
-            args["repo"],
-            args["title"],
-            args["head"],
-            args["base"],
-            body=args.get("body", ""),
-        )
-        return f"✅ Pull request created: #{result['number']}\n🔗 {result['url']}"
+        try:
+            result = github_create_pull_request(
+                args["owner"],
+                args["repo"],
+                args["title"],
+                args["head"],
+                args["base"],
+                body=args.get("body", ""),
+            )
+            return f"✅ Pull request created: #{result['number']}\n🔗 {result['url']}"
+        except RuntimeError as e:
+            return f"⚠️ {e}\nSet GITHUB_TOKEN env var: export GITHUB_TOKEN='ghp_xxx'"
 
     elif name == "github_get_file_contents":
-        content = github_get_file_contents(
-            args["owner"],
-            args["repo"],
-            args["path"],
-            ref=args.get("ref", "main"),
-        )
-        return f"📄 {args['path']}:\n```\n{content[:2000]}\n```"
+        try:
+            content = github_get_file_contents(
+                args["owner"],
+                args["repo"],
+                args["path"],
+                ref=args.get("ref", "main"),
+            )
+            return f"📄 {args['path']}:\n```\n{content[:2000]}\n```"
+        except RuntimeError as e:
+            return f"⚠️ {e}\nSet GITHUB_TOKEN env var: export GITHUB_TOKEN='ghp_xxx'"
 
     else:
         raise ToolExecutionError(f"Unknown tool: {name}")
