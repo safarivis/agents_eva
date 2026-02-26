@@ -61,6 +61,7 @@ eva-orchestrator/
 | `get_emails` | Gmail via Composio |
 | `send_email` | Gmail via Composio |
 | `web_search` | Exa via Composio |
+| `github_*` | GitHub API - Direct REST API |
 
 ## My Review System (Triad)
 

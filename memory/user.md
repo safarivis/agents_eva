@@ -53,6 +53,7 @@
 - WhatsApp for urgent/mobile
 - Email for formal/client
 - Prefers async over meetings when possible
+- **BREVITY: Keep responses short and punchy. No long explanations unless asked. One-liners preferred.**
 
 ## Current Stack
 

@@ -3,7 +3,12 @@ import os
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
+import requests
 from composio import ComposioToolSet, Action
+
+# GitHub API configuration
+GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
+GITHUB_API_BASE = "https://api.github.com"
 
 
 def _get_toolset() -> ComposioToolSet:
@@ -90,3 +95,169 @@ def send_email(
         },
     )
     return bool(result.get("data", {}).get("id"))
+
+
+# ============================================================================
+# GitHub API Tools (Direct API - more reliable than Composio for GitHub)
+# ============================================================================
+
+def _github_headers() -> dict:
+    """Get GitHub API headers with auth."""
+    if not GITHUB_TOKEN:
+        raise RuntimeError("GITHUB_TOKEN not set in environment")
+    return {
+        "Authorization": f"token {GITHUB_TOKEN}",
+        "Accept": "application/vnd.github.v3+json",
+    }
+
+
+def github_get_repo(owner: str, repo: str) -> dict:
+    """Get repository information.
+    
+    Args:
+        owner: Repository owner (username or org)
+        repo: Repository name
+        
+    Returns:
+        Repo info dict with name, description, stars, forks, open_issues, etc.
+    """
+    resp = requests.get(
+        f"{GITHUB_API_BASE}/repos/{owner}/{repo}",
+        headers=_github_headers(),
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    return {
+        "name": data["name"],
+        "full_name": data["full_name"],
+        "description": data["description"],
+        "stars": data["stargazers_count"],
+        "forks": data["forks_count"],
+        "open_issues": data["open_issues_count"],
+        "language": data["language"],
+        "default_branch": data["default_branch"],
+        "html_url": data["html_url"],
+    }
+
+
+def github_list_issues(
+    owner: str,
+    repo: str,
+    state: str = "open",
+    limit: int = 10,
+) -> list[dict]:
+    """List issues in a repository.
+    
+    Args:
+        owner: Repository owner
+        repo: Repository name
+        state: Filter by state (open, closed, all)
+        limit: Max issues to return
+        
+    Returns:
+        List of issue dicts with number, title, state, created_at, url
+    """
+    resp = requests.get(
+        f"{GITHUB_API_BASE}/repos/{owner}/{repo}/issues",
+        headers=_github_headers(),
+        params={"state": state, "per_page": limit},
+    )
+    resp.raise_for_status()
+    return [
+        {
+            "number": i["number"],
+            "title": i["title"],
+            "state": i["state"],
+            "created_at": i["created_at"],
+            "url": i["html_url"],
+            "author": i["user"]["login"],
+        }
+        for i in resp.json()
+    ]
+
+
+def github_create_issue(
+    owner: str,
+    repo: str,
+    title: str,
+    body: str = "",
+    labels: list[str] | None = None,
+) -> dict:
+    """Create a new issue.
+    
+    Args:
+        owner: Repository owner
+        repo: Repository name
+        title: Issue title
+        body: Issue body/description
+        labels: List of label names
+        
+    Returns:
+        Created issue dict with number, url
+    """
+    payload = {"title": title, "body": body}
+    if labels:
+        payload["labels"] = labels
+        
+    resp = requests.post(
+        f"{GITHUB_API_BASE}/repos/{owner}/{repo}/issues",
+        headers=_github_headers(),
+        json=payload,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    return {"number": data["number"], "url": data["html_url"]}
+
+
+def github_create_pull_request(
+    owner: str,
+    repo: str,
+    title: str,
+    head: str,
+    base: str,
+    body: str = "",
+) -> dict:
+    """Create a pull request.
+    
+    Args:
+        owner: Repository owner
+        repo: Repository name
+        title: PR title
+        head: Branch with changes
+        base: Branch to merge into
+        body: PR description
+        
+    Returns:
+        Created PR dict with number, url
+    """
+    resp = requests.post(
+        f"{GITHUB_API_BASE}/repos/{owner}/{repo}/pulls",
+        headers=_github_headers(),
+        json={"title": title, "head": head, "base": base, "body": body},
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    return {"number": data["number"], "url": data["html_url"]}
+
+
+def github_get_file_contents(owner: str, repo: str, path: str, ref: str = "main") -> str:
+    """Get contents of a file from a repository.
+    
+    Args:
+        owner: Repository owner
+        repo: Repository name
+        path: File path in repo
+        ref: Branch or commit sha
+        
+    Returns:
+        File content as string
+    """
+    resp = requests.get(
+        f"{GITHUB_API_BASE}/repos/{owner}/{repo}/contents/{path}",
+        headers=_github_headers(),
+        params={"ref": ref},
+    )
+    resp.raise_for_status()
+    import base64
+    content_b64 = resp.json()["content"]
+    return base64.b64decode(content_b64).decode("utf-8")
