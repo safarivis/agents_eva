@@ -227,6 +227,8 @@ def execute_tool(name: str, args: dict, memory_dir: Path) -> str:
             return f"📄 {args['path']}:\n```\n{content[:2000]}\n```"
         except RuntimeError as e:
             return f"⚠️ {e}\nSet GITHUB_TOKEN env var: export GITHUB_TOKEN='ghp_xxx'"
+        except Exception as e:
+            return f"⚠️ Could not read file: {args.get('path', 'unknown')}. File may not exist or default branch isn't 'main'."
 
     else:
         raise ToolExecutionError(f"Unknown tool: {name}")
