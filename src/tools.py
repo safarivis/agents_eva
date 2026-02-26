@@ -8,6 +8,7 @@ from .composio_tools import (
     github_create_issue,
     github_create_pull_request,
     github_get_file_contents,
+    fetch_webpage,
 )
 
 # Tool definitions in Anthropic SDK format
@@ -125,6 +126,19 @@ TOOLS = [
             "required": ["owner", "repo", "path"],
         },
     },
+    # Web Browsing Tools
+    {
+        "name": "fetch_webpage",
+        "description": "Fetch and extract text content from any webpage URL",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "url": {"type": "string", "description": "Full URL to fetch (e.g., https://example.com)"},
+                "max_chars": {"type": "integer", "description": "Maximum characters to return", "default": 3000},
+            },
+            "required": ["url"],
+        },
+    },
 ]
 
 
@@ -231,6 +245,10 @@ def execute_tool(name: str, args: dict, memory_dir: Path) -> str:
             return f"⚠️ {e}\nSet GITHUB_TOKEN env var: export GITHUB_TOKEN='ghp_xxx'"
         except Exception as e:
             return f"⚠️ Could not read file: {args.get('path', 'unknown')}. File may not exist or default branch isn't 'main'."
+
+    elif name == "fetch_webpage":
+        content = fetch_webpage(args["url"], max_chars=args.get("max_chars", 3000))
+        return f"WEBPAGE CONTENT from {args['url']}:\n---\n{content}\n---\nEND OF PAGE"
 
     else:
         raise ToolExecutionError(f"Unknown tool: {name}")

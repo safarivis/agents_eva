@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import requests
+from requests_html import HTMLSession
 from composio import ComposioToolSet, Action
 
 # GitHub API configuration
@@ -285,3 +286,35 @@ def github_get_file_contents(owner: str, repo: str, path: str, ref: str = "main"
     import base64
     content_b64 = resp.json()["content"]
     return base64.b64decode(content_b64).decode("utf-8")
+
+
+# ============================================================================
+# Web Browsing Tools
+# ============================================================================
+
+def fetch_webpage(url: str, max_chars: int = 3000) -> str:
+    """Fetch and extract text content from a webpage.
+    
+    Args:
+        url: Full URL to fetch
+        max_chars: Maximum characters to return
+        
+    Returns:
+        Extracted text content from the page
+    """
+    try:
+        session = HTMLSession()
+        resp = session.get(url, timeout=30)
+        resp.raise_for_status()
+        
+        # Extract text, removing scripts and styles
+        resp.html.render(timeout=20)
+        text = resp.html.text
+        
+        # Clean up whitespace
+        lines = [line.strip() for line in text.split('\n') if line.strip()]
+        cleaned = '\n'.join(lines)
+        
+        return cleaned[:max_chars] if len(cleaned) > max_chars else cleaned
+    except Exception as e:
+        return f"Error fetching {url}: {str(e)}"
