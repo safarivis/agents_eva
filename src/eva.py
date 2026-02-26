@@ -9,13 +9,22 @@ from .agent import run_agent
 def _is_web_fetch(prompt: str) -> tuple[bool, str]:
     """Check if prompt is asking to fetch a webpage."""
     prompt_lower = prompt.lower()
-    if "http://" in prompt_lower or "https://" in prompt_lower:
-        return True, prompt
-    if any(cmd in prompt_lower for cmd in ["eval ", "check ", "browse ", "fetch "]):
+    
+    # Look for explicit URLs
+    for word in prompt.split():
+        if word.startswith("http://") or word.startswith("https://"):
+            return True, word
+    
+    # Look for domain names (e.g., lewkai.com, example.org)
+    if any(cmd in prompt_lower for cmd in ["eval ", "check ", "browse ", "fetch ", "see "]):
         for word in prompt.split():
             if "." in word and not word.startswith("-"):
-                if "github.com" not in word.lower():
-                    return True, word
+                word = word.strip(".,;:!?'")  # Clean punctuation
+                if "github.com" not in word.lower() and "." in word:
+                    # Ensure it looks like a URL
+                    if word.count(".") >= 1:
+                        url = word if word.startswith("http") else f"https://{word}"
+                        return True, url
     return False, ""
 
 
