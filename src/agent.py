@@ -68,6 +68,7 @@ def build_system_prompt(memory: dict[str, str]) -> str:
 - If user gives a GitHub URL like "https://github.com/owner/repo", use `github_get_repo`
 - If user asks about a FILE in a repo like "what does X.md say" or "read X from github", use `github_get_file_contents` with owner/repo/path
 - Parse URLs: https://github.com/OWNER/REPO/blob/BRANCH/PATH → owner, repo, path
+- NOTE: GitHub file paths are CASE-SENSITIVE. Use exact case from user or URL.
 
 ## FILE CONTENT RULES
 - When tool returns "FILE CONTENTS", show the content VERBATIM. Do not summarize. Do not say "it contains" or "it outlines".

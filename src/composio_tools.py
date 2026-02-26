@@ -246,17 +246,32 @@ def github_get_file_contents(owner: str, repo: str, path: str, ref: str = "main"
     Args:
         owner: Repository owner
         repo: Repository name
-        path: File path in repo
+        path: File path in repo (case-sensitive!)
         ref: Branch or commit sha
         
     Returns:
         File content as string
     """
+    # Try exact path first
     resp = requests.get(
         f"{GITHUB_API_BASE}/repos/{owner}/{repo}/contents/{path}",
         headers=_github_headers(),
         params={"ref": ref},
     )
+    # If 404, try common case variations
+    if resp.status_code == 404:
+        variations = [path.upper(), path.lower(), path.capitalize()]
+        for var in variations:
+            if var == path:
+                continue
+            resp = requests.get(
+                f"{GITHUB_API_BASE}/repos/{owner}/{repo}/contents/{var}",
+                headers=_github_headers(),
+                params={"ref": ref},
+            )
+            if resp.status_code == 200:
+                break
+    
     resp.raise_for_status()
     import base64
     content_b64 = resp.json()["content"]
