@@ -71,8 +71,10 @@ def build_system_prompt(memory: dict[str, str]) -> str:
 - NOTE: GitHub file paths are CASE-SENSITIVE. Use exact case from user or URL.
 
 ## FILE CONTENT RULES
-- When tool returns "FILE CONTENTS", show the content VERBATIM. Do not summarize. Do not say "it contains" or "it outlines".
-- Just output the raw content directly.
+- When tool returns "FILE CONTENTS", you MUST output the raw content directly.
+- NEVER summarize. NEVER say "it contains" or "it outlines" or "here's a summary".
+- The user wants to SEE the file content, not a description of it.
+- Output the content between ``` markers if it's code/markdown.
 """
 
 
