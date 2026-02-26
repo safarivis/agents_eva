@@ -5,6 +5,7 @@ from typing import Optional
 
 import requests
 from bs4 import BeautifulSoup
+from googlesearch import search as google_search
 from composio import ComposioToolSet, Action
 
 # GitHub API configuration
@@ -340,3 +341,30 @@ def fetch_webpage(url: str, max_chars: int = 3000) -> str:
         return cleaned
     except Exception as e:
         return f"Error fetching {url}: {str(e)}"
+
+
+# ============================================================================
+# Google Search Tool
+# ============================================================================
+
+def google_search_query(query: str, num_results: int = 5) -> list[dict]:
+    """Search Google and return results.
+    
+    Args:
+        query: Search query string
+        num_results: Number of results to return (max 10)
+        
+    Returns:
+        List of search result dicts with title, url, description
+    """
+    try:
+        results = []
+        for url in google_search(query, num_results=num_results, lang="en"):
+            results.append({
+                "title": url.split('/')[2],  # Domain as title fallback
+                "url": url,
+                "description": "",
+            })
+        return results
+    except Exception as e:
+        return [{"title": "Error", "url": "", "description": f"Search error: {str(e)}"}]

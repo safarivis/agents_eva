@@ -9,6 +9,7 @@ from .composio_tools import (
     github_create_pull_request,
     github_get_file_contents,
     fetch_webpage,
+    google_search_query,
 )
 
 # Tool definitions in Anthropic SDK format
@@ -139,6 +140,19 @@ TOOLS = [
             "required": ["url"],
         },
     },
+    # Search Tools
+    {
+        "name": "google_search",
+        "description": "Search Google and return results",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "Search query"},
+                "num_results": {"type": "integer", "description": "Number of results (1-10)", "default": 5},
+            },
+            "required": ["query"],
+        },
+    },
 ]
 
 
@@ -249,6 +263,17 @@ def execute_tool(name: str, args: dict, memory_dir: Path) -> str:
     elif name == "fetch_webpage":
         content = fetch_webpage(args["url"], max_chars=args.get("max_chars", 3000))
         return f"RAW CONTENT FROM {args['url']}:\n{content}\n[END OF CONTENT]"
+
+    elif name == "google_search":
+        results = google_search_query(args["query"], num_results=args.get("num_results", 5))
+        lines = [f"🔍 Google results for: {args['query']}", ""]
+        for i, r in enumerate(results, 1):
+            lines.append(f"{i}. {r['title']}")
+            lines.append(f"   {r['url']}")
+            if r.get('description'):
+                lines.append(f"   {r['description'][:100]}...")
+            lines.append("")
+        return "\n".join(lines)
 
     else:
         raise ToolExecutionError(f"Unknown tool: {name}")
