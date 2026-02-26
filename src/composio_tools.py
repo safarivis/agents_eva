@@ -258,14 +258,23 @@ def github_get_file_contents(owner: str, repo: str, path: str, ref: str = "main"
         headers=_github_headers(),
         params={"ref": ref},
     )
-    # If 404, try common case variations
+    # If 404, try case variations (e.g., CLAUDE.md, claude.md)
     if resp.status_code == 404:
-        variations = [path.upper(), path.lower(), path.capitalize()]
+        import os
+        base = os.path.basename(path)
+        dir_path = os.path.dirname(path)
+        # Common patterns: all caps name (CLAUDE.md), all lower (claude.md)
+        name, ext = os.path.splitext(base)
+        variations = [
+            f"{name.upper()}{ext.lower()}",  # CLAUDE.md
+            f"{name.lower()}{ext.lower()}",  # claude.md
+        ]
         for var in variations:
-            if var == path:
+            if var == base:
                 continue
+            test_path = f"{dir_path}/{var}" if dir_path else var
             resp = requests.get(
-                f"{GITHUB_API_BASE}/repos/{owner}/{repo}/contents/{var}",
+                f"{GITHUB_API_BASE}/repos/{owner}/{repo}/contents/{test_path}",
                 headers=_github_headers(),
                 params={"ref": ref},
             )
