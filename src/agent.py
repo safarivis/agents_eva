@@ -70,6 +70,10 @@ def build_system_prompt(memory: dict[str, str]) -> str:
 - Parse URLs: https://github.com/OWNER/REPO/blob/BRANCH/PATH → owner, repo, path
 - NOTE: GitHub file paths are CASE-SENSITIVE. Use exact case from user or URL.
 
+## WEB BROWSING
+- If user asks about a website (non-GitHub URL), use `fetch_webpage` to get content
+- Examples: "check lewkai.com", "what's on example.com", "browse https://..."
+
 ## FILE CONTENT RULES
 - When tool returns "FILE CONTENTS", you MUST output the raw content directly.
 - NEVER summarize. NEVER say "it contains" or "it outlines" or "here's a summary".
