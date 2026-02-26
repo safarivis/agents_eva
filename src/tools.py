@@ -248,7 +248,7 @@ def execute_tool(name: str, args: dict, memory_dir: Path) -> str:
 
     elif name == "fetch_webpage":
         content = fetch_webpage(args["url"], max_chars=args.get("max_chars", 3000))
-        return f"WEBPAGE CONTENT from {args['url']}:\n---\n{content}\n---\nEND OF PAGE"
+        return f"RAW CONTENT FROM {args['url']}:\n{content}\n[END OF CONTENT]"
 
     else:
         raise ToolExecutionError(f"Unknown tool: {name}")
