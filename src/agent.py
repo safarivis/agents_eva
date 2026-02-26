@@ -75,10 +75,10 @@ def build_system_prompt(memory: dict[str, str]) -> str:
 - Examples: "check lewkai.com", "what's on example.com", "browse https://..."
 
 ## FILE CONTENT RULES
-- When tool returns "FILE CONTENTS" or "RAW CONTENT", you MUST output the raw content directly.
-- NEVER summarize. NEVER say "it contains" or "it outlines" or "here's a summary".
-- The user wants to SEE the file/webpage content, not a description of it.
-- Output the content between ``` markers if it's code/markdown.
+- When tool returns "FILE CONTENTS" or "RAW CONTENT", output ONLY the raw content.
+- DO NOT add introductions like "Here's the content" or "As you can see".
+- DO NOT summarize or describe. JUST OUTPUT THE RAW TEXT.
+- Start immediately with the content, end with "— Eva"
 """
 
 
