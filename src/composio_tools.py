@@ -313,16 +313,30 @@ def fetch_webpage(url: str, max_chars: int = 3000) -> str:
         soup = BeautifulSoup(resp.text, 'html.parser')
         
         # Remove script and style elements
-        for script in soup(["script", "style", "nav", "footer"]):
+        for script in soup(["script", "style", "nav", "footer", "header"]):
             script.decompose()
         
-        # Get text
-        text = soup.get_text()
+        # Get text with better formatting
+        text = soup.get_text(separator='\n', strip=True)
         
-        # Clean up whitespace
-        lines = [line.strip() for line in text.split('\n') if line.strip()]
+        # Clean up excessive whitespace but preserve paragraph breaks
+        lines = []
+        prev_empty = False
+        for line in text.split('\n'):
+            line = line.strip()
+            if line:
+                lines.append(line)
+                prev_empty = False
+            elif not prev_empty:
+                lines.append('')  # Keep one empty line between paragraphs
+                prev_empty = True
+        
         cleaned = '\n'.join(lines)
         
-        return cleaned[:max_chars] if len(cleaned) > max_chars else cleaned
+        # Truncate if too long
+        if len(cleaned) > max_chars:
+            cleaned = cleaned[:max_chars] + "\n\n[...truncated]"
+        
+        return cleaned
     except Exception as e:
         return f"Error fetching {url}: {str(e)}"
