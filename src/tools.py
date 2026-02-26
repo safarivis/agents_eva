@@ -224,7 +224,9 @@ def execute_tool(name: str, args: dict, memory_dir: Path) -> str:
                 args["path"],
                 ref=args.get("ref", "main"),
             )
-            return f"📄 {args['path']}:\n```\n{content[:2000]}\n```"
+            # Truncate if too long
+            display = content[:3000] if len(content) < 3000 else content[:3000] + "\n[...truncated]"
+            return f"FILE CONTENTS of {args['path']}:\n---\n{display}\n---\nEND OF FILE"
         except RuntimeError as e:
             return f"⚠️ {e}\nSet GITHUB_TOKEN env var: export GITHUB_TOKEN='ghp_xxx'"
         except Exception as e:
