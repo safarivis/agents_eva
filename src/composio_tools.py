@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import requests
-from requests_html import HTMLSession
+from bs4 import BeautifulSoup
 from composio import ComposioToolSet, Action
 
 # GitHub API configuration
@@ -303,13 +303,21 @@ def fetch_webpage(url: str, max_chars: int = 3000) -> str:
         Extracted text content from the page
     """
     try:
-        session = HTMLSession()
-        resp = session.get(url, timeout=30)
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        }
+        resp = requests.get(url, headers=headers, timeout=30)
         resp.raise_for_status()
         
-        # Extract text, removing scripts and styles
-        resp.html.render(timeout=20)
-        text = resp.html.text
+        # Parse with BeautifulSoup
+        soup = BeautifulSoup(resp.text, 'html.parser')
+        
+        # Remove script and style elements
+        for script in soup(["script", "style", "nav", "footer"]):
+            script.decompose()
+        
+        # Get text
+        text = soup.get_text()
         
         # Clean up whitespace
         lines = [line.strip() for line in text.split('\n') if line.strip()]
